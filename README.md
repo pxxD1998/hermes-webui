@@ -284,7 +284,7 @@ If an AI assistant is helping with install, reinstall, bootstrap, provider setup
 
 ### Settings and configuration
 - **Hermes Control Center** (sidebar launcher button) -- Conversation tab (export/import/clear), Preferences tab (model, send key, theme, language, all toggles), System tab (version, password)
-- Send key: Enter (default) or Ctrl/Cmd+Enter
+- Send key: Enter (default), Ctrl/Cmd+Enter, or Shift+Enter; an optional browser-local override can keep different keyboard behavior on different devices without changing the shared server setting. The override stays in that browser's site data, is not included in `hermes backup/import`, and resets to the shared setting after site data is cleared or the WebUI origin changes.
 - Show/hide CLI sessions toggle (enabled by default)
 - Token usage display toggle (off by default, also via `/usage` command)
 - Control Center always opens on the Conversation tab; resets on close

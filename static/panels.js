@@ -8726,8 +8726,41 @@ function _setPreferencesAutosaveStatus(state){
 
 function _rememberPreferencesSaved(payload){
   if(!payload) return;
-  if(payload.send_key!==undefined) localStorage.setItem('hermes-pref-send_key',payload.send_key);
   if(payload.language!==undefined) localStorage.setItem('hermes-pref-language',payload.language);
+}
+
+function _applyConfirmedSendKeyPreference(settings){
+  const allowed=['enter','ctrl+enter','shift+enter'];
+  const confirmed=(settings&&allowed.includes(settings.send_key))
+    ? settings.send_key
+    : (window._sharedSendKey||'enter');
+  if(settings&&allowed.includes(settings.send_key)){
+    try{localStorage.setItem('hermes-pref-send_key-confirmed',confirmed);}catch(_){}
+  }
+  if(typeof window._applySendKeyPreference==='function') window._applySendKeyPreference(confirmed);
+  else window._sendKey=confirmed;
+  return confirmed;
+}
+
+function _saveBrowserSendKeyOverride(value){
+  const allowed=['shared','enter','ctrl+enter','shift+enter'];
+  const resolved=allowed.includes(value)?value:'shared';
+  let previous='shared';
+  try{previous=localStorage.getItem('hermes-browser-send-key-override')||'shared';}catch(_){ }
+  try{
+    if(resolved==='shared') localStorage.removeItem('hermes-browser-send-key-override');
+    else localStorage.setItem('hermes-browser-send-key-override',resolved);
+  }catch(e){
+    const selector=$('settingsBrowserSendKey');
+    if(selector) selector.value=previous;
+    if(typeof window._applySendKeyPreference==='function') window._applySendKeyPreference(window._sharedSendKey||'enter');
+    if(typeof showToast==='function') showToast(t('settings_browser_send_key_save_failed'));
+    return false;
+  }
+  const shared=window._sharedSendKey||(($('settingsSendKey')||{}).value)||'enter';
+  if(typeof window._applySendKeyPreference==='function') window._applySendKeyPreference(shared);
+  if(typeof showToast==='function') showToast(t(resolved==='shared'?'settings_browser_send_key_using_shared':'settings_browser_send_key_saved'));
+  return true;
 }
 
 function _applyWorkspaceTodosTabVisibility(){
@@ -8751,6 +8784,7 @@ function _schedulePreferencesAutosave(){
 async function _autosavePreferencesSettings(payload){
   try{
     const saved=await api('/api/settings',{method:'POST',body:JSON.stringify(payload)});
+    if(payload&&payload.send_key!==undefined) _applyConfirmedSendKeyPreference(saved);
     if(payload&&payload.terminal_auto_expand_on_output!==undefined){
       window._terminalAutoExpandOnOutput=!!(saved&&saved.terminal_auto_expand_on_output);
     }
@@ -8848,6 +8882,7 @@ function _syncSettingsMaxTokensPlaceholder(field, fallbackValue){
 async function loadSettingsPanel(){
   try{
     const settings=await api('/api/settings');
+    _applyConfirmedSendKeyPreference(settings);
     checkWebUIVersionSkew(settings);
     // Populate the version badges from the server — keeps them in sync with git
     // tags automatically without any manual release step.
@@ -9113,6 +9148,16 @@ async function loadSettingsPanel(){
     // Send key preference
     const sendKeySel=$('settingsSendKey');
     if(sendKeySel){sendKeySel.value=settings.send_key||'enter';sendKeySel.addEventListener('change',_schedulePreferencesAutosave,{once:false});}
+    const browserSendKeySel=$('settingsBrowserSendKey');
+    if(browserSendKeySel){
+      let browserSendKey='shared';
+      try{browserSendKey=localStorage.getItem('hermes-browser-send-key-override')||'shared';}catch(_){}
+      browserSendKeySel.value=['shared','enter','ctrl+enter','shift+enter'].includes(browserSendKey)?browserSendKey:'shared';
+      if(!browserSendKeySel._browserSendKeyBound){
+        browserSendKeySel._browserSendKeyBound=true;
+        browserSendKeySel.addEventListener('change',()=>_saveBrowserSendKeyOverride(browserSendKeySel.value));
+      }
+    }
     // Language preference — populate from LOCALES bundle
     const langSel=$('settingsLanguage');
     if(langSel){
@@ -11777,7 +11822,7 @@ async function deletePasskey(id){
 
 function _applySavedSettingsUi(saved, body, opts){
   const {sendKey,showTokenUsage,showQuotaChip,showConversationOutline,showBusyPlaceholderHint,showTps,fadeTextEffect,showCliSessions,theme,skin,language,sidebarDensity,fontSize}=opts;
-  window._sendKey=sendKey||'enter';
+  _applyConfirmedSendKeyPreference(saved);
   window._showTokenUsage=showTokenUsage;
   window._showQuotaChip=showQuotaChip===true;
   window._showConversationOutline=showConversationOutline===true;

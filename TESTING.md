@@ -1846,6 +1846,7 @@ Each has automated API-level tests in `tests/test_sprint{N}.py`.
 - Type `/` in composer → autocomplete dropdown appears. Arrow keys navigate.
 - Type `/help` → lists all commands. `/clear` clears conversation. `/model` switches.
 - Settings panel: change send key to Ctrl+Enter. Verify Enter inserts newline.
+- Set "Send Key on this browser" to Enter while the shared setting is Shift+Enter. Verify Enter sends in this browser, another browser still follows the shared setting, and choosing "Use shared Send Key setting" restores Shift+Enter behavior.
 
 ### Sprint 18: Thinking + Tree View + Preview Fix
 - View a file in workspace. Click a breadcrumb or folder → preview closes automatically.
