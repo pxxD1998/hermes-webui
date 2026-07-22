@@ -1185,6 +1185,16 @@
               </select>
             </div>
             <div class="settings-field">
+              <label for="settingsBrowserSendKey" data-i18n="settings_label_browser_send_key">Send Key on this browser</label>
+              <select id="settingsBrowserSendKey" style="width:100%;padding:8px;background:var(--code-bg);color:var(--text);border:1px solid var(--border2);border-radius:6px">
+                <option value="shared" data-i18n="settings_browser_send_key_use_shared">Use shared Send Key setting</option>
+                <option value="enter">Enter (Shift+Enter for newline)</option>
+                <option value="ctrl+enter">Ctrl+Enter (Enter for newline)</option>
+                <option value="shift+enter">Shift+Enter (Enter for newline)</option>
+              </select>
+              <div style="font-size:11px;color:var(--muted);margin-top:4px" data-i18n="settings_desc_browser_send_key">Overrides the shared setting only in this browser. Clearing site data resets it to the shared setting.</div>
+            </div>
+            <div class="settings-field">
               <label for="settingsLanguage" data-i18n="settings_label_language">Language</label>
               <select id="settingsLanguage" style="width:100%;padding:8px;background:var(--code-bg);color:var(--text);border:1px solid var(--border2);border-radius:6px"></select>
             </div>

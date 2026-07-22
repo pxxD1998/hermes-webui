@@ -8724,6 +8724,22 @@ function _rememberPreferencesSaved(payload){
   if(payload.language!==undefined) localStorage.setItem('hermes-pref-language',payload.language);
 }
 
+function _saveBrowserSendKeyOverride(value){
+  const allowed=['shared','enter','ctrl+enter','shift+enter'];
+  const resolved=allowed.includes(value)?value:'shared';
+  try{
+    if(resolved==='shared') localStorage.removeItem('hermes-browser-send-key-override');
+    else localStorage.setItem('hermes-browser-send-key-override',resolved);
+  }catch(e){
+    if(typeof showToast==='function') showToast(t('settings_browser_send_key_save_failed'));
+    return false;
+  }
+  const shared=($('settingsSendKey')||{}).value||window._sharedSendKey||'enter';
+  if(typeof window._applySendKeyPreference==='function') window._applySendKeyPreference(shared);
+  if(typeof showToast==='function') showToast(t(resolved==='shared'?'settings_browser_send_key_using_shared':'settings_browser_send_key_saved'));
+  return true;
+}
+
 function _applyWorkspaceTodosTabVisibility(){
   const tab=$('workspaceTodosTab');
   if(tab) tab.hidden=!window._workspaceTodosTab;
@@ -8745,6 +8761,9 @@ function _schedulePreferencesAutosave(){
 async function _autosavePreferencesSettings(payload){
   try{
     const saved=await api('/api/settings',{method:'POST',body:JSON.stringify(payload)});
+    if(payload&&payload.send_key!==undefined&&typeof window._applySendKeyPreference==='function'){
+      window._applySendKeyPreference((saved&&saved.send_key)||payload.send_key);
+    }
     if(payload&&payload.terminal_auto_expand_on_output!==undefined){
       window._terminalAutoExpandOnOutput=!!(saved&&saved.terminal_auto_expand_on_output);
     }
@@ -9107,6 +9126,16 @@ async function loadSettingsPanel(){
     // Send key preference
     const sendKeySel=$('settingsSendKey');
     if(sendKeySel){sendKeySel.value=settings.send_key||'enter';sendKeySel.addEventListener('change',_schedulePreferencesAutosave,{once:false});}
+    const browserSendKeySel=$('settingsBrowserSendKey');
+    if(browserSendKeySel){
+      let browserSendKey='shared';
+      try{browserSendKey=localStorage.getItem('hermes-browser-send-key-override')||'shared';}catch(_){}
+      browserSendKeySel.value=['shared','enter','ctrl+enter','shift+enter'].includes(browserSendKey)?browserSendKey:'shared';
+      if(!browserSendKeySel._browserSendKeyBound){
+        browserSendKeySel._browserSendKeyBound=true;
+        browserSendKeySel.addEventListener('change',()=>_saveBrowserSendKeyOverride(browserSendKeySel.value));
+      }
+    }
     // Language preference — populate from LOCALES bundle
     const langSel=$('settingsLanguage');
     if(langSel){
@@ -11771,7 +11800,8 @@ async function deletePasskey(id){
 
 function _applySavedSettingsUi(saved, body, opts){
   const {sendKey,showTokenUsage,showQuotaChip,showConversationOutline,showBusyPlaceholderHint,showTps,fadeTextEffect,showCliSessions,theme,skin,language,sidebarDensity,fontSize}=opts;
-  window._sendKey=sendKey||'enter';
+  if(typeof window._applySendKeyPreference==='function') window._applySendKeyPreference(sendKey||'enter');
+  else window._sendKey=sendKey||'enter';
   window._showTokenUsage=showTokenUsage;
   window._showQuotaChip=showQuotaChip===true;
   window._showConversationOutline=showConversationOutline===true;

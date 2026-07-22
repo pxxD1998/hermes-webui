@@ -2173,6 +2173,24 @@ let _imeComposing=false;
 })();
 function _isImeEnter(e){return e.isComposing||e.keyCode===229||_imeComposing;}
 window._isImeEnter=_isImeEnter;
+const _BROWSER_SEND_KEY_OVERRIDE_STORAGE='hermes-browser-send-key-override';
+function _resolveSendKeyPreference(sharedSendKey,browserOverride){
+  const allowed=['enter','ctrl+enter','shift+enter'];
+  const shared=allowed.includes(sharedSendKey)?sharedSendKey:'enter';
+  return allowed.includes(browserOverride)?browserOverride:shared;
+}
+function _readBrowserSendKeyOverride(){
+  try{return localStorage.getItem(_BROWSER_SEND_KEY_OVERRIDE_STORAGE)||'shared';}
+  catch(_){return 'shared';}
+}
+function _applySendKeyPreference(sharedSendKey){
+  window._sharedSendKey=_resolveSendKeyPreference(sharedSendKey,'shared');
+  window._sendKey=_resolveSendKeyPreference(window._sharedSendKey,_readBrowserSendKeyOverride());
+  return window._sendKey;
+}
+window._resolveSendKeyPreference=_resolveSendKeyPreference;
+window._readBrowserSendKeyOverride=_readBrowserSendKeyOverride;
+window._applySendKeyPreference=_applySendKeyPreference;
 // #3076: a touch-primary device (`pointer:coarse`) can still have a
 // physical keyboard attached (Android tablet + Bluetooth keyboard,
 // detachable Surface in tablet mode, iPad + Magic Keyboard). When that
@@ -3062,7 +3080,7 @@ window._mirrorSpeechSettingsFromServer=_mirrorSpeechSettingsFromServer;
     const s=await api('/api/settings');
     _bootSettings=s;
     if(typeof checkWebUIVersionSkew==='function'){try{checkWebUIVersionSkew(s);}catch(_){}}
-    window._sendKey=s.send_key||'enter';
+    _applySendKeyPreference(s.send_key||'enter');
     // Persist default workspace so the blank new-chat page can show it
     // and workspace actions (New file/folder) work before the first session (#804).
     if(s.default_workspace) S._profileDefaultWorkspace=s.default_workspace;
@@ -3219,7 +3237,9 @@ window._mirrorSpeechSettingsFromServer=_mirrorSpeechSettingsFromServer;
     // TTS: apply enabled state on boot so buttons show/hide correctly (#499)
     if(typeof _applyTtsEnabled==='function') _applyTtsEnabled(localStorage.getItem('hermes-tts-enabled')==='true');
   }catch(e){
-    window._sendKey='enter';
+    let cachedSendKey='enter';
+    try{cachedSendKey=localStorage.getItem('hermes-pref-send_key')||'enter';}catch(_){}
+    _applySendKeyPreference(cachedSendKey);
     window._showTokenUsage=false;
     window._showQuotaChip=false;
     window._showConversationOutline=false;
