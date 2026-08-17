@@ -22,89 +22,84 @@ jobs:
         shell: python
         run: |
           from pathlib import Path
+          import re
 
           sessions_path = Path("static/sessions.js")
           sessions = sessions_path.read_text(encoding="utf-8")
 
-          above_old = """  }else if(pickerH<=spaceAbove){
-            top=rect.top-gap-pickerH;
-          }else{
-          """
-          above_new = """  }else if(pickerH<=spaceAbove){
-            // Keep the existing viewport-relative bottom anchor so this picker stays
-            // attached to the session row when the viewport height changes.
-            top=null;
-            picker.style.bottom=(window.innerHeight-rect.top+gap)+'px';
-          }else{
-          """
-          # YAML block indentation is stripped uniformly; normalize string indentation.
-          above_old = above_old.replace("          }else", "  }else").replace("            top", "    top").replace("          }else{", "  }else{")
-          above_new = above_new.replace("          }else", "  }else").replace("            //", "    //").replace("            //", "    //").replace("            top", "    top").replace("            picker", "    picker").replace("          }else{", "  }else{")
-          assert above_old in sessions, "fits-above branch not found"
-          sessions = sessions.replace(above_old, above_new, 1)
+          above_pattern = re.compile(
+              r"}else if\(pickerH<=spaceAbove\)\{\s*"
+              r"top=rect\.top-gap-pickerH;"
+          )
+          above_replacement = "\n".join([
+              "}else if(pickerH<=spaceAbove){",
+              "    // Keep above-positioned pickers bottom-anchored so they stay attached across resize.",
+              "    top=null;",
+              "    picker.style.bottom=(window.innerHeight-rect.top+gap)+'px';",
+          ])
+          sessions, count = above_pattern.subn(above_replacement, sessions, count=1)
+          assert count == 1, f"fits-above branch patch count: {count}"
 
-          final_old = """  picker.style.top=top+'px';
-          picker.style.bottom='auto';
-          """
-          final_new = """  if(top===null){
-            picker.style.top='auto';
-          }else{
-            picker.style.top=top+'px';
-            picker.style.bottom='auto';
-          }
-          """
-          final_old = final_old.replace("          picker", "  picker")
-          final_new = final_new.replace("          if", "  if").replace("            picker", "    picker").replace("          }else", "  }else").replace("          }", "  }")
-          assert final_old in sessions, "final picker positioning block not found"
-          sessions = sessions.replace(final_old, final_new, 1)
+          final_pattern = re.compile(
+              r"(?m)^  picker\.style\.top=top\+'px';\n"
+              r"  picker\.style\.bottom='auto';$"
+          )
+          final_replacement = "\n".join([
+              "  if(top===null){",
+              "    picker.style.top='auto';",
+              "  }else{",
+              "    picker.style.top=top+'px';",
+              "    picker.style.bottom='auto';",
+              "  }",
+          ])
+          sessions, count = final_pattern.subn(final_replacement, sessions, count=1)
+          assert count == 1, f"final positioning patch count: {count}"
           sessions_path.write_text(sessions, encoding="utf-8")
 
           test_path = Path("tests/test_project_picker_viewport_position.py")
           test = test_path.read_text(encoding="utf-8")
-
-          driver_old = """  const style = mountedPicker.style;
-          const top = Number.parseFloat(style.top);
-          const maxHeight = style.maxHeight && style.maxHeight !== 'none'
-            ? Number.parseFloat(style.maxHeight)
-            : null;
-          const renderedHeight = maxHeight === null ? pickerHeight : Math.min(pickerHeight, maxHeight);
-          return {
-            top,
-            maxHeight,
-            overflowY: style.overflowY || '',
-            renderedBottom: top + renderedHeight,
-          };
-          """
-          driver_new = """  const style = mountedPicker.style;
-          const maxHeight = style.maxHeight && style.maxHeight !== 'none'
-            ? Number.parseFloat(style.maxHeight)
-            : null;
-          const renderedHeight = maxHeight === null ? pickerHeight : Math.min(pickerHeight, maxHeight);
-          const topStyle = style.top || '';
-          const bottomStyle = style.bottom || '';
-          const top = topStyle && topStyle !== 'auto'
-            ? Number.parseFloat(topStyle)
-            : window.innerHeight - Number.parseFloat(bottomStyle) - renderedHeight;
-          const resizeDelta = 200;
-          const resizedTop = topStyle === 'auto'
-            ? (window.innerHeight + resizeDelta) - Number.parseFloat(bottomStyle) - renderedHeight
-            : top;
-          const resizedAnchorTop = rect.top + resizeDelta;
-          return {
-            top,
-            topStyle,
-            bottomStyle,
-            resizeGap: resizedAnchorTop - (resizedTop + renderedHeight),
-            maxHeight,
-            overflowY: style.overflowY || '',
-            renderedBottom: top + renderedHeight,
-          };
-          """
-          # Remove the workflow's YAML indentation from both snippets.
-          driver_old = "\n".join(line[10:] if line.startswith("          ") else line for line in driver_old.splitlines()) + "\n"
-          driver_new = "\n".join(line[10:] if line.startswith("          ") else line for line in driver_new.splitlines()) + "\n"
-          assert driver_old in test, "test driver block not found"
-          test = test.replace(driver_old, driver_new, 1)
+          driver_pattern = re.compile(
+              r"  const style = mountedPicker\.style;\n"
+              r"  const top = Number\.parseFloat\(style\.top\);\n"
+              r"  const maxHeight = style\.maxHeight && style\.maxHeight !== 'none'\n"
+              r"    \? Number\.parseFloat\(style\.maxHeight\)\n"
+              r"    : null;\n"
+              r"  const renderedHeight = maxHeight === null \? pickerHeight : Math\.min\(pickerHeight, maxHeight\);\n"
+              r"  return \{\n"
+              r"    top,\n"
+              r"    maxHeight,\n"
+              r"    overflowY: style\.overflowY \|\| '',\n"
+              r"    renderedBottom: top \+ renderedHeight,\n"
+              r"  \};"
+          )
+          driver_replacement = "\n".join([
+              "  const style = mountedPicker.style;",
+              "  const maxHeight = style.maxHeight && style.maxHeight !== 'none'",
+              "    ? Number.parseFloat(style.maxHeight)",
+              "    : null;",
+              "  const renderedHeight = maxHeight === null ? pickerHeight : Math.min(pickerHeight, maxHeight);",
+              "  const topStyle = style.top || '';",
+              "  const bottomStyle = style.bottom || '';",
+              "  const top = topStyle && topStyle !== 'auto'",
+              "    ? Number.parseFloat(topStyle)",
+              "    : window.innerHeight - Number.parseFloat(bottomStyle) - renderedHeight;",
+              "  const resizeDelta = 200;",
+              "  const resizedTop = topStyle === 'auto'",
+              "    ? (window.innerHeight + resizeDelta) - Number.parseFloat(bottomStyle) - renderedHeight",
+              "    : top;",
+              "  const resizedAnchorTop = rect.top + resizeDelta;",
+              "  return {",
+              "    top,",
+              "    topStyle,",
+              "    bottomStyle,",
+              "    resizeGap: resizedAnchorTop - (resizedTop + renderedHeight),",
+              "    maxHeight,",
+              "    overflowY: style.overflowY || '',",
+              "    renderedBottom: top + renderedHeight,",
+              "  };",
+          ])
+          test, count = driver_pattern.subn(driver_replacement, test, count=1)
+          assert count == 1, f"driver patch count: {count}"
 
           assertion_old = '    assert screenshot_like["renderedBottom"] <= 892\n'
           assertion_new = (
