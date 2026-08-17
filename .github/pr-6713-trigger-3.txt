@@ -1,1 +1,0 @@
-Trigger one-shot PR #6713 resize-anchor repair workflow.
