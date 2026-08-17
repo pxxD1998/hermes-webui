@@ -25,49 +25,44 @@ jobs:
 
           sessions_path = Path("static/sessions.js")
           sessions = sessions_path.read_text(encoding="utf-8")
-          old = """  let top=rect.bottom+gap;
-          if(pickerH<=spaceBelow){
-            // Preferred placement: directly below the session action button.
-          }else if(pickerH<=spaceAbove){
+
+          above_old = """  }else if(pickerH<=spaceAbove){
             top=rect.top-gap-pickerH;
           }else{
-            // Neither side fits the natural height. Use the roomier side and keep every
-            // project reachable by scrolling inside the picker.
-            const openAbove=spaceAbove>spaceBelow;
-            const available=openAbove?spaceAbove:spaceBelow;
-            top=openAbove?margin:rect.bottom+gap;
-            picker.style.maxHeight=available+'px';
-            picker.style.overflowY='auto';
-          }
-          picker.style.top=top+'px';
-          picker.style.bottom='auto';
           """
-          new = """  if(pickerH<=spaceBelow){
-            // Preferred placement: directly below the session action button.
-            picker.style.top=(rect.bottom+gap)+'px';
-            picker.style.bottom='auto';
-          }else if(pickerH<=spaceAbove){
-            // Keep above-positioned pickers bottom-anchored so they stay attached when
-            // the viewport height changes and the session row moves with it.
-            picker.style.top='auto';
+          above_new = """  }else if(pickerH<=spaceAbove){
+            // Keep the existing viewport-relative bottom anchor so this picker stays
+            // attached to the session row when the viewport height changes.
+            top=null;
             picker.style.bottom=(window.innerHeight-rect.top+gap)+'px';
           }else{
-            // Neither side fits the natural height. Use the roomier side and keep every
-            // project reachable by scrolling inside the picker.
-            const openAbove=spaceAbove>spaceBelow;
-            const available=openAbove?spaceAbove:spaceBelow;
-            picker.style.top=(openAbove?margin:rect.bottom+gap)+'px';
+          """
+          # YAML block indentation is stripped uniformly; normalize string indentation.
+          above_old = above_old.replace("          }else", "  }else").replace("            top", "    top").replace("          }else{", "  }else{")
+          above_new = above_new.replace("          }else", "  }else").replace("            //", "    //").replace("            //", "    //").replace("            top", "    top").replace("            picker", "    picker").replace("          }else{", "  }else{")
+          assert above_old in sessions, "fits-above branch not found"
+          sessions = sessions.replace(above_old, above_new, 1)
+
+          final_old = """  picker.style.top=top+'px';
+          picker.style.bottom='auto';
+          """
+          final_new = """  if(top===null){
+            picker.style.top='auto';
+          }else{
+            picker.style.top=top+'px';
             picker.style.bottom='auto';
-            picker.style.maxHeight=available+'px';
-            picker.style.overflowY='auto';
           }
           """
-          assert old in sessions, "expected project-picker placement block not found"
-          sessions_path.write_text(sessions.replace(old, new, 1), encoding="utf-8")
+          final_old = final_old.replace("          picker", "  picker")
+          final_new = final_new.replace("          if", "  if").replace("            picker", "    picker").replace("          }else", "  }else").replace("          }", "  }")
+          assert final_old in sessions, "final picker positioning block not found"
+          sessions = sessions.replace(final_old, final_new, 1)
+          sessions_path.write_text(sessions, encoding="utf-8")
 
           test_path = Path("tests/test_project_picker_viewport_position.py")
           test = test_path.read_text(encoding="utf-8")
-          old_driver = """  const style = mountedPicker.style;
+
+          driver_old = """  const style = mountedPicker.style;
           const top = Number.parseFloat(style.top);
           const maxHeight = style.maxHeight && style.maxHeight !== 'none'
             ? Number.parseFloat(style.maxHeight)
@@ -80,7 +75,7 @@ jobs:
             renderedBottom: top + renderedHeight,
           };
           """
-          new_driver = """  const style = mountedPicker.style;
+          driver_new = """  const style = mountedPicker.style;
           const maxHeight = style.maxHeight && style.maxHeight !== 'none'
             ? Number.parseFloat(style.maxHeight)
             : null;
@@ -105,20 +100,22 @@ jobs:
             renderedBottom: top + renderedHeight,
           };
           """
-          assert old_driver in test, "expected test driver block not found"
-          test = test.replace(old_driver, new_driver, 1)
+          # Remove the workflow's YAML indentation from both snippets.
+          driver_old = "\n".join(line[10:] if line.startswith("          ") else line for line in driver_old.splitlines()) + "\n"
+          driver_new = "\n".join(line[10:] if line.startswith("          ") else line for line in driver_new.splitlines()) + "\n"
+          assert driver_old in test, "test driver block not found"
+          test = test.replace(driver_old, driver_new, 1)
 
-          old_assert = """    assert screenshot_like[\"renderedBottom\"] <= 892
-          """
-          new_assert = """    assert screenshot_like[\"renderedBottom\"] <= 892
-              assert screenshot_like[\"topStyle\"] == \"auto\"
-              assert screenshot_like[\"bottomStyle\"] == \"224px\"
-              assert screenshot_like[\"resizeGap\"] == 4
-          """
-          # Normalize the intended Python indentation explicitly.
-          new_assert = new_assert.replace("              assert", "    assert")
-          assert old_assert in test, "expected screenshot assertion not found"
-          test_path.write_text(test.replace(old_assert, new_assert, 1), encoding="utf-8")
+          assertion_old = '    assert screenshot_like["renderedBottom"] <= 892\n'
+          assertion_new = (
+              assertion_old
+              + '    assert screenshot_like["topStyle"] == "auto"\n'
+              + '    assert screenshot_like["bottomStyle"] == "224px"\n'
+              + '    assert screenshot_like["resizeGap"] == 4\n'
+          )
+          assert assertion_old in test, "screenshot assertion not found"
+          test = test.replace(assertion_old, assertion_new, 1)
+          test_path.write_text(test, encoding="utf-8")
 
       - name: Run targeted checks
         run: |
