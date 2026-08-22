@@ -1,4 +1,5 @@
     import re as _re
+    from api.helpers import split_media_token_ref
 
     if resolve_ref is None:
         resolve_ref = resolve_media_ref
@@ -12,13 +13,20 @@
         content = msg.get("content")
         if not isinstance(content, str) or "MEDIA:" not in content:
             continue
-        refs = media_re.findall(content)
-        if not refs:
+        matches = list(media_re.finditer(content))
+        if not matches:
             continue
         existing = msg.get("_media_snapshots")
         snaps = dict(existing) if isinstance(existing, dict) else {}
         changed = False
-        for raw_ref in refs:
+        for match in matches:
+            parts = split_media_token_ref(content, match)
+            if not parts:
+                continue
+            raw_ref, _suffix = parts
+            raw_ref = raw_ref.strip()
+            if not raw_ref:
+                continue
             if resolve_ref is not None:
                 try:
                     path = resolve_ref(raw_ref)
