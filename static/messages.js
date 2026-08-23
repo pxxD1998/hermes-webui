@@ -17,7 +17,7 @@ function _smdMediaTokenParts(source, matchOffset, rawRef, parent){
     // HTML-entity quote opener. &amp;quot; is the longest accepted form
     // (10 chars); literal and singly encoded quotes are shorter.
     const prior=parent&&typeof parent.textContent==='string'?parent.textContent.slice(-10):'';
-    const contextQuotedSource=quotedSource(prior+before);
+    const contextQuotedSource=quotedSource(prior);
     if(contextQuotedSource){
       return _mediaTokenParts(contextQuotedSource,contextQuotedSource.length,quotedRef(rawRef));
     }
