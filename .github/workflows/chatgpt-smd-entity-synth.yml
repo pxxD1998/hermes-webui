@@ -1,0 +1,113 @@
+name: ChatGPT SMD entity synthesis
+
+on:
+  push:
+    branches:
+      - chatgpt/media-entity-stream2-patch
+
+permissions:
+  contents: write
+
+jobs:
+  synthesize:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: chatgpt/media-entity-stream2-patch
+          fetch-depth: 0
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Apply narrow SMD parser-escape fix
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          path = Path('static/messages.js')
+          source = path.read_text(encoding='utf-8')
+          start = source.index('  function _smdMediaTokenParts(')
+          end = source.index('  function _smdMediaTailFlushEntry(', start)
+          old = source[start:end]
+          assert "parent.textContent.slice(-6)" in old
+          assert "(?:&quot;|&#39;)$" in old
+          replacement = '''  function _smdMediaQuoteSource(value){
+            const normalized=String(value||'')
+              .replace(/&amp;quot;$/,'&quot;')
+              .replace(/&amp;#39;$/,'&#39;');
+            return normalized.endsWith('"')||normalized.endsWith("'")||/(?:&quot;|&#39;)$/.test(normalized)
+              ? normalized
+              : '';
+          }
+          function _smdMediaQuoteRef(value){
+            return String(value||'')
+              .replace(/&amp;quot;(?=[.,;:!?]*$)/,'&quot;')
+              .replace(/&amp;#39;(?=[.,;:!?]*$)/,'&#39;');
+          }
+          function _smdMediaTokenParts(source, matchOffset, rawRef, parent){
+            const value=String(source||'');
+            const offset=Number(matchOffset)||0;
+            const before=value.slice(0,offset);
+            const localQuoteSource=_smdMediaQuoteSource(before);
+            if(localQuoteSource){
+              return _mediaTokenParts(localQuoteSource,localQuoteSource.length,_smdMediaQuoteRef(rawRef));
+            }
+            // Keep enough same-owner context to reconstruct a split parser-escaped
+            // HTML-entity quote opener. &amp;quot; is the longest accepted form
+            // (10 chars); literal and singly encoded quotes are shorter.
+            const prior=parent&&typeof parent.textContent==='string'?parent.textContent.slice(-10):'';
+            const contextQuoteSource=_smdMediaQuoteSource(prior+before);
+            if(contextQuoteSource){
+              return _mediaTokenParts(contextQuoteSource,contextQuoteSource.length,_smdMediaQuoteRef(rawRef));
+            }
+            return _mediaTokenParts(prior+value,prior.length+offset,rawRef);
+          }
+'''
+          path.write_text(source[:start] + replacement + source[end:], encoding='utf-8')
+
+          path = Path('tests/test_smd_media_in_stream.py')
+          source = path.read_text(encoding='utf-8')
+          start = source.index('    def test_real_smd_parser_detaches_balanced_quotes_in_safe_fade_split_and_tail_paths(self):')
+          end = source.index('    def test_real_smd_parser_preserves_quoted_remote_query_and_fragment_values(self):', start)
+          replacement = '''    def test_real_smd_parser_detaches_balanced_quotes_in_safe_fade_split_and_tail_paths(self):
+              expected_quote_by_case = {
+                  "quotedDouble": '"',
+                  "quotedSingleSplit": "'",
+                  "entityQuotedDoubleSplit": '"',
+                  "entityQuotedSingleEnd": "'",
+                  "entityQuotedDoubleOpenerSplit": '"',
+              }
+              for case_name, expected_quote in expected_quote_by_case.items():
+                  for mode, result in self.cases["boundaries"][case_name].items():
+                      with self.subTest(case=case_name, mode=mode):
+                          self.assertIn('data-ref="/tmp/report.xlsx"', result["html"])
+                          self.assertNotIn('data-ref="/tmp/report.xlsx%22"', result["html"])
+                          self.assertNotIn("data-ref=\\"/tmp/report.xlsx'\\"", result["html"])
+                          self.assertTrue(
+                              result["text"].rstrip().endswith(f"{expected_quote}."),
+                              result["text"],
+                          )
+
+'''
+          path.write_text(source[:start] + replacement + source[end:], encoding='utf-8')
+          PY
+
+      - name: Run maintainer real-SMD target
+        run: |
+          python -m pip install --quiet pytest
+          python -m pytest tests/test_smd_media_in_stream.py::TestSmdMediaRealParserBehaviour -p no:xdist -q
+
+      - name: Commit synthesized blobs
+        shell: bash
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git rm .github/workflows/chatgpt-smd-entity-synth.yml
+          git add static/messages.js tests/test_smd_media_in_stream.py
+          git diff --cached --check
+          git diff --cached --name-only
+          git commit -m 'synth: normalize SMD escaped quote entities 20260823'
+          git push origin HEAD:chatgpt/media-entity-stream2-patch
