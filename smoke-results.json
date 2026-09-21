@@ -1,0 +1,38 @@
+[
+  {
+    "route": "/",
+    "errors": [
+      "Failed to load resource: net::ERR_EMPTY_RESPONSE",
+      "Failed to load resource: net::ERR_EMPTY_RESPONSE",
+      "Failed to load resource: net::ERR_EMPTY_RESPONSE",
+      "Failed to load resource: net::ERR_EMPTY_RESPONSE",
+      "Failed to load resource: net::ERR_EMPTY_RESPONSE",
+      "Failed to load resource: net::ERR_EMPTY_RESPONSE",
+      "Failed to load resource: net::ERR_EMPTY_RESPONSE"
+    ]
+  },
+  {
+    "route": "/#settings",
+    "errors": [
+      "Failed to load resource: net::ERR_EMPTY_RESPONSE",
+      "Failed to load resource: net::ERR_EMPTY_RESPONSE",
+      "Failed to load resource: net::ERR_EMPTY_RESPONSE",
+      "Failed to load resource: net::ERR_EMPTY_RESPONSE",
+      "Failed to load resource: net::ERR_EMPTY_RESPONSE",
+      "Failed to load resource: net::ERR_EMPTY_RESPONSE",
+      "Failed to load resource: net::ERR_EMPTY_RESPONSE"
+    ]
+  },
+  {
+    "route": "/#sessions",
+    "errors": [
+      "Failed to load resource: net::ERR_EMPTY_RESPONSE",
+      "Failed to load resource: net::ERR_EMPTY_RESPONSE",
+      "Failed to load resource: net::ERR_EMPTY_RESPONSE",
+      "Failed to load resource: net::ERR_EMPTY_RESPONSE",
+      "Failed to load resource: net::ERR_EMPTY_RESPONSE",
+      "Failed to load resource: net::ERR_EMPTY_RESPONSE",
+      "Failed to load resource: net::ERR_EMPTY_RESPONSE"
+    ]
+  }
+]

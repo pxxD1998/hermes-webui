@@ -1,0 +1,183 @@
+{
+  "browser": "153.0.8010.0",
+  "cases": [
+    {
+      "name": "desktop",
+      "version": "before",
+      "initial": {
+        "top": 425,
+        "bottom": 549.375,
+        "left": 183,
+        "right": 343,
+        "anchorTop": 393,
+        "anchorBottom": 421,
+        "gap": 4,
+        "cap": "",
+        "scrollHeight": 122,
+        "clientHeight": 122
+      },
+      "moved": {
+        "top": 425,
+        "bottom": 549.375,
+        "left": 183,
+        "right": 343,
+        "anchorTop": 293,
+        "anchorBottom": 321,
+        "gap": 104,
+        "cap": "",
+        "scrollHeight": 122,
+        "clientHeight": 122
+      },
+      "afterRowRemoval": {
+        "closed": false,
+        "orphaned": true
+      }
+    },
+    {
+      "name": "desktop",
+      "version": "after",
+      "initial": {
+        "top": 425,
+        "bottom": 549.375,
+        "left": 183,
+        "right": 343,
+        "anchorTop": 393,
+        "anchorBottom": 421,
+        "gap": 4,
+        "cap": "",
+        "scrollHeight": 122,
+        "clientHeight": 122
+      },
+      "moved": {
+        "top": 325,
+        "bottom": 449.375,
+        "left": 183,
+        "right": 343,
+        "anchorTop": 293,
+        "anchorBottom": 321,
+        "gap": 4,
+        "cap": "",
+        "scrollHeight": 122,
+        "clientHeight": 122
+      },
+      "afterRowRemoval": {
+        "closed": true
+      }
+    },
+    {
+      "name": "narrow",
+      "version": "before",
+      "initial": {
+        "top": 425,
+        "bottom": 549.375,
+        "left": 183,
+        "right": 343,
+        "anchorTop": 393,
+        "anchorBottom": 421,
+        "gap": 4,
+        "cap": "",
+        "scrollHeight": 122,
+        "clientHeight": 122
+      },
+      "moved": {
+        "top": 425,
+        "bottom": 549.375,
+        "left": 183,
+        "right": 343,
+        "anchorTop": 293,
+        "anchorBottom": 321,
+        "gap": 104,
+        "cap": "",
+        "scrollHeight": 122,
+        "clientHeight": 122
+      },
+      "afterRowRemoval": {
+        "closed": false,
+        "orphaned": true
+      }
+    },
+    {
+      "name": "narrow",
+      "version": "after",
+      "initial": {
+        "top": 425,
+        "bottom": 549.375,
+        "left": 183,
+        "right": 343,
+        "anchorTop": 393,
+        "anchorBottom": 421,
+        "gap": 4,
+        "cap": "",
+        "scrollHeight": 122,
+        "clientHeight": 122
+      },
+      "moved": {
+        "top": 325,
+        "bottom": 449.375,
+        "left": 183,
+        "right": 343,
+        "anchorTop": 293,
+        "anchorBottom": 321,
+        "gap": 4,
+        "cap": "",
+        "scrollHeight": 122,
+        "clientHeight": 122
+      },
+      "afterRowRemoval": {
+        "closed": true
+      }
+    },
+    {
+      "name": "long-list",
+      "top": 8,
+      "bottom": 389,
+      "left": 183,
+      "right": 343,
+      "anchorTop": 393,
+      "anchorBottom": 421,
+      "gap": 4,
+      "cap": "381px",
+      "scrollHeight": 729,
+      "clientHeight": 379,
+      "finalItem": {
+        "visible": true,
+        "scrollTop": 350
+      }
+    },
+    {
+      "name": "injected-visual-viewport-bounds",
+      "top": 108,
+      "bottom": 389,
+      "left": 188,
+      "right": 348,
+      "anchorTop": 393,
+      "anchorBottom": 421,
+      "gap": 4,
+      "cap": "281px",
+      "scrollHeight": 729,
+      "clientHeight": 279
+    },
+    {
+      "name": "native-chromium-pinch-zoom",
+      "viewport": {
+        "height": 675.2000122070312,
+        "width": 312,
+        "layoutHeight": 844,
+        "layoutWidth": 390
+      },
+      "top": 8,
+      "bottom": 389,
+      "left": 113,
+      "right": 273,
+      "anchorTop": 393,
+      "anchorBottom": 421,
+      "gap": 4,
+      "cap": "381px",
+      "scrollHeight": 729,
+      "clientHeight": 379
+    }
+  ],
+  "scope": "Production picker function and stylesheet in isolated DOM fixture; synthetic session/project labels.",
+  "before_sha": "6ce559969683bfbb1e3c54c4f19736cbacff23e7",
+  "after_sha": "4631ef1d887f1845c101a1d34ab03336ca721e9a"
+}
