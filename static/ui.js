@@ -28758,23 +28758,36 @@ async function promptNewFile(targetDir = S.currentDir || '.'){
     showToast(t('external_link_read_only'), 2000);
     return;
   }
+  const repaintBoundary=_captureWorkspaceRepaintBoundary();
+  const owner=repaintBoundary.owner;
+  if(!_workspaceRepaintBoundaryIsCurrent(repaintBoundary))return;
   const targetLabel=_workspaceCreateTargetLabel(targetDir);
   const name=await showPromptDialog({
     title:t('new_file_prompt_title', targetLabel),
     placeholder:'filename.txt',
     confirmLabel:t('create')
   });
-  if(!name||!name.trim()||_sessionLeftScreen(session)) return;
+  if(!name||!name.trim()) return;
+  // The owner is pinned before the dialog: a switch that completed, or one that
+  // is still loading, drops the answer instead of adopting the new conversation.
+  if(!_workspaceRepaintBoundaryIsCurrent(repaintBoundary))return;
   const relPath=_workspaceJoinTargetPath(targetDir,name);
+  const refreshDir=S.currentDir;
   try{
     await api('/api/file/create',{method:'POST',body:JSON.stringify({session_id:session.session_id,path:relPath,content:''})});
-    // Same as deleteWorkspaceDir: never open the new file in the pane now on screen.
-    if(_sessionLeftScreen(session)){await _refreshTreeAfterOffscreenWrite(session);return;}
+    if(!_workspaceRepaintBoundaryIsCurrent(repaintBoundary)){
+      // A write that settles after its conversation left the screen still
+      // refreshes the visible tree when it shows the same workspace; open,
+      // toast and preview stay suppressed.
+      if(!_contextTransitionOwnerIsCurrent(owner)&&typeof _refreshTreeAfterOffscreenWrite==='function')await _refreshTreeAfterOffscreenWrite(session);
+      return;
+    }
     showToast(t('created')+name.trim());
     delete S._dirCache[targetDir || '.'];
-    await loadDir(S.currentDir);
+    const refreshCommitted=await loadDir(refreshDir);
+    if(!refreshCommitted||!_workspaceRepaintBoundaryIsCurrent(repaintBoundary))return;
     openFile(relPath);
-  }catch(e){setStatus(t('create_failed')+e.message);}
+  }catch(e){if(_workspaceRepaintBoundaryIsCurrent(repaintBoundary))setStatus(t('create_failed')+e.message);}
 }
 
 async function promptNewFolder(targetDir = S.currentDir || '.'){
@@ -28804,23 +28817,33 @@ async function promptNewFolder(targetDir = S.currentDir || '.'){
     showToast(t('external_link_read_only'), 2000);
     return;
   }
+  const repaintBoundary=_captureWorkspaceRepaintBoundary();
+  const owner=repaintBoundary.owner;
+  if(!_workspaceRepaintBoundaryIsCurrent(repaintBoundary))return;
   const targetLabel=_workspaceCreateTargetLabel(targetDir);
   const name=await showPromptDialog({
     title:t('new_folder_prompt_title', targetLabel),
     placeholder:'folder-name',
     confirmLabel:t('create')
   });
-  if(!name||!name.trim()||_sessionLeftScreen(session)) return;
+  if(!name||!name.trim()) return;
+  // Same as promptNewFile: the owner was pinned before the dialog, so a switch
+  // that landed while it was open drops the answer instead of adopting it.
+  if(!_workspaceRepaintBoundaryIsCurrent(repaintBoundary))return;
   const relPath=_workspaceJoinTargetPath(targetDir,name);
+  const refreshDir=S.currentDir;
   try{
     await api('/api/file/create-dir',{method:'POST',body:JSON.stringify({session_id:session.session_id,path:relPath})});
-    // Same as deleteWorkspaceDir: no reload and no "add as space" prompt over the
-    // conversation now on screen.
-    if(_sessionLeftScreen(session)){await _refreshTreeAfterOffscreenWrite(session);return;}
+    if(!_workspaceRepaintBoundaryIsCurrent(repaintBoundary)){
+      // Same as promptNewFile: keep the offscreen tree refresh, suppress the rest.
+      if(!_contextTransitionOwnerIsCurrent(owner)&&typeof _refreshTreeAfterOffscreenWrite==='function')await _refreshTreeAfterOffscreenWrite(session);
+      return;
+    }
     showToast(t('folder_created')+name.trim());
     delete S._dirCache[targetDir || '.'];
-    await loadDir(S.currentDir);
-    const absPath=session.workspace?(targetDir==='.'?`${session.workspace}/${name.trim()}`:`${session.workspace}/${targetDir}/${name.trim()}`):null;
+    const refreshCommitted=await loadDir(refreshDir);
+    if(!refreshCommitted||!_workspaceRepaintBoundaryIsCurrent(repaintBoundary))return;
+    const absPath=owner.workspace?(targetDir==='.'?`${owner.workspace}/${name.trim()}`:`${owner.workspace}/${targetDir}/${name.trim()}`):null;
     if(absPath){
       const addAsSpace=await showConfirmDialog({
         title:t('folder_add_as_space_title'),
@@ -28829,16 +28852,18 @@ async function promptNewFolder(targetDir = S.currentDir || '.'){
         cancelLabel:t('status_no'),
         focusCancel:true
       });
+      if(!_workspaceRepaintBoundaryIsCurrent(repaintBoundary))return;
       if(addAsSpace){
         try{
           const data=await api('/api/workspaces/add',{method:'POST',body:JSON.stringify({path:absPath})});
+          if(!_workspaceRepaintBoundaryIsCurrent(repaintBoundary))return;
           if(typeof _workspaceList!=='undefined')_workspaceList=data.workspaces||_workspaceList||[];
           if(typeof renderWorkspacesPanel==='function')renderWorkspacesPanel(_workspaceList);
           showToast(t('workspace_added'));
-        }catch(e2){setStatus((t('error_prefix')||'Error: ')+e2.message);}
+        }catch(e2){if(_workspaceRepaintBoundaryIsCurrent(repaintBoundary))setStatus((t('error_prefix')||'Error: ')+e2.message);}
       }
     }
-  }catch(e){setStatus(t('folder_create_failed')+e.message);}
+  }catch(e){if(_workspaceRepaintBoundaryIsCurrent(repaintBoundary))setStatus(t('folder_create_failed')+e.message);}
 }
 
 function _syncComposerFiles(){

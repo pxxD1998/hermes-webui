@@ -2492,6 +2492,29 @@ function _contextTransitionOwnerIsCurrent(owner){
     &&String((S.session&&S.session.profile)||S.activeProfile||'default')===owner.profile;
 }
 
+function _captureWorkspaceRepaintBoundary(){
+  return {
+    owner:_captureContextTransitionOwner(),
+    directory:String(S.currentDir||'.'),
+    treeGeneration:typeof _wsTreeGen==='number'?_wsTreeGen:null,
+  };
+}
+
+function _workspaceRepaintBoundaryIsCurrent(boundary){
+  if(!boundary||!_contextTransitionOwnerIsCurrent(boundary.owner))return false;
+  // A switch that is already loading another conversation retires this write's
+  // follow-ups: the landing conversation reloads its own tree. Without this a
+  // dialog answered while the switch is pending would still repaint into the
+  // conversation that is on its way out.
+  if(typeof _loadingSessionId!=='undefined'&&_loadingSessionId
+    &&String(_loadingSessionId)!==String(boundary.owner.sid))return false;
+  if(String(S.currentDir||'.')!==boundary.directory)return false;
+  if(boundary.treeGeneration!==null){
+    if(typeof _wsTreeGen!=='number'||_wsTreeGen!==boundary.treeGeneration)return false;
+  }
+  return true;
+}
+
 let _newSessionInFlight=null;
 let _newSessionRequest=null;
 let _blankPageSessionInFlight=null;
